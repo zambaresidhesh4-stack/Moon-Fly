@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Moon Fly | Siddhesh Game</title>
+
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at bottom, #020024, #090979, #000);
+    font-family: Arial, sans-serif;
+    color: white;
+}
+
+#hud {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    font-size: 18px;
+    z-index: 10;
+}
+
+#center {
+    display: none;
+    position: fixed;
+    top: 35%;
+    width: 100%;
+    text-align: center;
+}
+
+#center h1 {
+    font-size: 36px;
+}
+
+button {
+    padding: 12px 25px;
+    font-size: 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #00ffcc;
+}
+
+canvas {
+    display: block;
+}
+</style>
+</head>
+
+<body>
+
+<div id="hud">
+Score: <span id="score">0</span><br>
+Level: <span id="level">1</span>
+</div>
+
+<div id="center">
+<h1 id="msg"></h1>
+<button onclick="startGame()">Play Again</button>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let player, moons, score, level, running, reverse;
+
+function startGame() {
+    player = { x: canvas.width/2, y: canvas.height-120, r: 15 };
+    moons = [];
+    score = 0;
+    level = 1;
+    reverse = false;
+    running = true;
+
+    for (let i = 0; i < 5; i++) createMoon();
+
+    document.getElementById("score").innerText = score;
+    document.getElementById("level").innerText = level;
+    document.getElementById("center").style.display = "none";
+
+    gameLoop();
+}
+
+function createMoon() {
+    moons.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * -canvas.height,
+        r: 25 + Math.random()*10,
+        speed: 6 + Math.random()*3,
+        danger: Math.random() > 0.4
+    });
+}
+
+// Controls
+canvas.addEventListener("mousemove", e => {
+    player.x = reverse ? canvas.width - e.clientX : e.clientX;
+    player.y = reverse ? canvas.height - e.clientY : e.clientY;
+});
+
+canvas.addEventListener("touchmove", e => {
+    player.x = reverse ? canvas.width - e.touches[0].clientX : e.touches[0].clientX;
+    player.y = reverse ? canvas.height - e.touches[0].clientY : e.touches[0].clientY;
+});
+
+function gameLoop() {
+    if (!running) return;
+
+    // Screen shake
+    ctx.save();
+    ctx.translate(Math.random()*4-2, Math.random()*4-2);
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Player
+    ctx.fillStyle = "#00f7ff";
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+    ctx.fill();
+
+    moons.forEach(moon => {
+        // Moon color
+        ctx.fillStyle = moon.danger ? "#ffffff" : "#666666";
+        ctx.beginPath();
+        ctx.arc(moon.x, moon.y, moon.r, 0, Math.PI*2);
+        ctx.fill();
+
+        // Movement
+        moon.y += moon.speed + level*0.3;
+        moon.x += Math.sin(moon.y * 0.05) * 3;
+
+        // Reset moon
+        if (moon.y > canvas.height) {
+            moon.y = -60;
+            moon.x = Math.random() * canvas.width;
+            score++;
+            document.getElementById("score").innerText = score;
+
+            if (score % 5 === 0) {
+                level++;
+                document.getElementById("level").innerText = level;
+                if (level % 3 === 0) reverse = !reverse;
+                createMoon(); // more moons = confusion
+            }
+        }
+
+        // Collision
+        let dx = player.x - moon.x;
+        let dy = player.y - moon.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+
+        if (moon.danger && dist < player.r + moon.r) {
+            endGame(false);
+        }
+    });
+
+    ctx.restore();
+    requestAnimationFrame(gameLoop);
+}
+
+function endGame(win) {
+    running = false;
+    document.getElementById("msg").innerHTML = win
+        ? "🎉 YOU WIN 🎉<br>You defeated space!"
+        : "💥 GAME OVER 💥<br>Too hard? Try again!";
+    document.getElementById("center").style.display = "block";
+}
+
+startGame();
+</script>
+
+</body>
+</html>
